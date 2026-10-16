@@ -1,4 +1,5 @@
 const API = 'https://api.github.com';
+const POR_PAGINA = 5;
 
 const form = document.querySelector('#form-buscar');
 const input = document.querySelector('#input-usuario');
@@ -10,10 +11,22 @@ const repos = document.querySelector('#repos');
 const selectOrden = document.querySelector('#select-orden');
 const tituloLenguajes = document.querySelector('#titulo-lenguajes');
 const listaLenguajes = document.querySelector('#lenguajes');
+const btnMas = document.querySelector('#btn-mas');
+const pie = document.querySelector('#pie');
+const spanRateLimit = document.querySelector('#ratelimit');
+
+let usuarioActual = '';
+let paginaActual = 1;
 
 // 1. Petición genérica con traducción de errores HTTP
 async function obtenerJSON(url) {
   const res = await fetch(url);
+
+  const restantes = res.headers.get('x-ratelimit-remaining');
+  if (restantes !== null) {
+    spanRateLimit.textContent = restantes;
+    pie.classList.remove('oculto');
+  }
 
   if (res.status === 404) throw new Error('Usuario no encontrado');
   if (res.status === 403) {
@@ -50,8 +63,8 @@ function mostrarPerfil(u) {
 }
 
 // 3. Pintar la lista de repositorios
-function mostrarRepos(lista) {
-  repos.innerHTML = '';
+function mostrarRepos(lista, reemplazar = false) {
+  if (reemplazar) repos.innerHTML = '';
 
   lista.forEach((r) => {
     const a = document.createElement('a');
@@ -71,12 +84,10 @@ function mostrarRepos(lista) {
 
 function contarLenguajes(lista) {
   const conteo = {};
-
   lista.forEach((r) => {
     const lenguaje = r.language ?? 'sin lenguaje';
     conteo[lenguaje] = (conteo[lenguaje] ?? 0) + 1;
   });
-
   return conteo;
 }
 
@@ -95,6 +106,39 @@ function mostrarLenguajes(lista) {
   tituloLenguajes.classList.remove('oculto');
 }
 
+function construirURLRepos(usuario, pagina) {
+  const params = new URLSearchParams({
+    sort: selectOrden.value,
+    per_page: POR_PAGINA,
+    page: pagina,
+  });
+  return `${API}/users/${usuario}/repos?${params}`;
+}
+
+async function cargarMas() {
+  if (!usuarioActual) return;
+
+  paginaActual += 1;
+  btnMas.disabled = true;
+
+  try {
+    const datosRepos = await obtenerJSON(construirURLRepos(usuarioActual, paginaActual));
+
+    mostrarRepos(datosRepos, false);
+
+    if (datosRepos.length < POR_PAGINA) {
+      btnMas.classList.add('oculto');
+    }
+  } catch (error) {
+    estado.className = 'error';
+    estado.textContent = error.message;
+  } finally {
+    btnMas.disabled = false;
+  }
+}
+
+btnMas.addEventListener('click', cargarMas);
+
 // 4. Evento submit: dos peticiones en paralelo
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -102,10 +146,8 @@ form.addEventListener('submit', async (e) => {
   const usuario = encodeURIComponent(input.value.trim());
   if (!usuario) return;
 
-  const params = new URLSearchParams({
-    sort: selectOrden.value,
-    per_page: 100,
-  });
+  usuarioActual = usuario;
+  paginaActual = 1;
 
   boton.disabled = true;
   estado.className = '';
@@ -114,17 +156,25 @@ form.addEventListener('submit', async (e) => {
   try {
     const [datosUsuario, datosRepos] = await Promise.all([
       obtenerJSON(`${API}/users/${usuario}`),
-      obtenerJSON(`${API}/users/${usuario}/repos?${params}`),
+      obtenerJSON(construirURLRepos(usuario, paginaActual)),
     ]);
 
     mostrarPerfil(datosUsuario);
-    mostrarRepos(datosRepos);
+    mostrarRepos(datosRepos, true);
     mostrarLenguajes(datosRepos);
+
+    if (datosRepos.length === POR_PAGINA) {
+      btnMas.classList.remove('oculto');
+    } else {
+      btnMas.classList.add('oculto');
+    }
+
     estado.textContent = '';
   } catch (error) {
     perfil.classList.add('oculto');
     titulo.classList.add('oculto');
     tituloLenguajes.classList.add('oculto');
+    btnMas.classList.add('oculto');
     repos.innerHTML = '';
     listaLenguajes.innerHTML = '';
     estado.className = 'error';

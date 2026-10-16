@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Buscador de perfiles GitHub</title>
+  <title>Buscador de perfiles GitHub - Actividad 2</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,6 +29,23 @@
     .oculto {
       display: none;
     }
+
+    .controles {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    #lenguajes {
+      list-style: none;
+      padding: 0;
+    }
+
+    #lenguajes li {
+      padding: 0.2rem 0;
+      border-bottom: 1px solid #eee;
+    }
   </style>
 </head>
 <body>
@@ -36,8 +53,18 @@
   <h1>Buscador de perfiles GitHub</h1>
 
   <form id="form-buscar">
-    <input type="text" id="input-usuario" placeholder="Usuario" required>
-    <button type="submit" id="btn-buscar">Buscar</button>
+    <div class="controles">
+      <input type="text" id="input-usuario" placeholder="Usuario" required>
+
+      <label for="select-orden">Ordenar:</label>
+      <select id="select-orden">
+        <option value="updated" selected>Actualizados</option>
+        <option value="created">Creados</option>
+        <option value="full_name">Nombre (A-Z)</option>
+      </select>
+
+      <button type="submit" id="btn-buscar">Buscar</button>
+    </div>
   </form>
 
   <p id="estado"></p>
@@ -46,6 +73,9 @@
 
   <h2 id="titulo-repos" class="oculto">Repositorios recientes</h2>
   <ul id="repos"></ul>
+
+  <h3 id="titulo-lenguajes" class="oculto">Lenguajes más usados</h3>
+  <ul id="lenguajes"></ul>
 
   <script src="app.js"></script>
 </body>

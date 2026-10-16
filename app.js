@@ -7,6 +7,9 @@ const estado = document.querySelector('#estado');
 const perfil = document.querySelector('#perfil');
 const titulo = document.querySelector('#titulo-repos');
 const repos = document.querySelector('#repos');
+const selectOrden = document.querySelector('#select-orden');
+const tituloLenguajes = document.querySelector('#titulo-lenguajes');
+const listaLenguajes = document.querySelector('#lenguajes');
 
 // 1. Petición genérica con traducción de errores HTTP
 async function obtenerJSON(url) {
@@ -66,6 +69,32 @@ function mostrarRepos(lista) {
   titulo.classList.remove('oculto');
 }
 
+function contarLenguajes(lista) {
+  const conteo = {};
+
+  lista.forEach((r) => {
+    const lenguaje = r.language ?? 'sin lenguaje';
+    conteo[lenguaje] = (conteo[lenguaje] ?? 0) + 1;
+  });
+
+  return conteo;
+}
+
+function mostrarLenguajes(lista) {
+  const conteo = contarLenguajes(lista);
+  const ordenado = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+
+  listaLenguajes.innerHTML = '';
+
+  ordenado.forEach(([lenguaje, cantidad]) => {
+    const li = document.createElement('li');
+    li.textContent = `${lenguaje}: ${cantidad} repositorio${cantidad === 1 ? '' : 's'}`;
+    listaLenguajes.append(li);
+  });
+
+  tituloLenguajes.classList.remove('oculto');
+}
+
 // 4. Evento submit: dos peticiones en paralelo
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -73,7 +102,10 @@ form.addEventListener('submit', async (e) => {
   const usuario = encodeURIComponent(input.value.trim());
   if (!usuario) return;
 
-  const params = new URLSearchParams({ sort: 'updated', per_page: 5 });
+  const params = new URLSearchParams({
+    sort: selectOrden.value,
+    per_page: 100,
+  });
 
   boton.disabled = true;
   estado.className = '';
@@ -87,11 +119,14 @@ form.addEventListener('submit', async (e) => {
 
     mostrarPerfil(datosUsuario);
     mostrarRepos(datosRepos);
+    mostrarLenguajes(datosRepos);
     estado.textContent = '';
   } catch (error) {
     perfil.classList.add('oculto');
     titulo.classList.add('oculto');
+    tituloLenguajes.classList.add('oculto');
     repos.innerHTML = '';
+    listaLenguajes.innerHTML = '';
     estado.className = 'error';
     estado.textContent = error.message;
   } finally {
